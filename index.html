@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt Chart Camera App</title>
+</head>
+<body>
+<div>
+    <video id="video" autoplay="true" playsinline muted></video>
+    <canvas id="canvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const shiftedAreas = [
+            { x: 50, y: 50, width: 60, height: 50 },
+            { x: 110, y: 100, width: 30, height: 50 },
+            { x: 140, y: 150, width: 20, height: 50 },
+            { x: 160, y: 200, width: 70, height: 50 },
+            { x: 230, y: 250, width: 50, height: 50 },
+            { x: 280, y: 300, width: 90, height: 50 },
+            { x: 370, y: 350, width: 20, height: 50 },
+            { x: 390, y: 400, width: 40, height: 50 },
+            { x: 410, y: 450, width: 50, height: 50 }
+        ];
+        let originalImageData;
+
+        const setupCamera = async () => {
+            try {
+                const constraints = {
+                    audio: false,
+                    video: {
+                        facingMode: "user"
+                    }
+                }
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+            }
+        };
+
+        const handleVideoTimeUpdate = () => {
+            const context = canvas.getContext('2d');
+            const time = video.currentTime;
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            originalImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.putImageData(originalImageData, 0, 0);
+
+            shiftedAreas.forEach(area => {
+                const imageData = context.getImageData(area.x, area.y, area.width, area.height);
+                context.putImageData(imageData, area.x + 50, area.y);
+            });
+        };
+
+        const intervalId = setInterval(handleVideoTimeUpdate, 20);
+
+        setupCamera();
+
+        window.addEventListener('beforeunload', () => {
+            const stream = video.srcObject;
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+            }
+            clearInterval(intervalId);
+        });
+    });
+</script>
+</body>
+</html>
